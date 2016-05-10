@@ -6,6 +6,7 @@ import datetime
 import time
 import aiohttp
 import asyncio
+import re
 
 settings = {"POLL_DURATION" : 60}
 
@@ -38,17 +39,108 @@ class General:
             await self.bot.say(randchoice(choices))
 
     @commands.command(pass_context=True)
-    async def roll(self, ctx, number : int = 100):
+    async def roll(self, ctx, inputString : str = ""):
         """Rolls random number (between 1 and user choice)
 
         Defaults to 100.
+
+        To roll and sum multiple dice at once, type #d# and any modifiers you want after it
+        Ex: roll 5d6 + 5 - 8 will roll 5 six-sided dice, add 5 to the result, and subtract 7 from that
+        Supports +, -, *, /, and modulo modifiers
         """
         author = ctx.message.author
-        if number > 1:
-            n = str(randint(1, number))
+        #format content to accept spaces
+        if len(ctx.message.content) > 5:
+            inputString = ctx.message.content[5:]
+            while inputString[0] is ' ':
+                inputString = inputString[1:]
+
+        #standar roll 100 if they just roll
+        if len(inputString) is 0:
+            n = str(randint(1, 100))
             return await self.bot.say("{} :game_die: {} :game_die:".format(author.mention, n))
         else:
-            return await self.bot.say("{} Maybe higher than 1? ;P".format(author.mention))
+            allNums = list(map(int, re.findall(r'\d+', inputString)))
+            if len(allNums) is 0:
+                n = str(randint(1, 100))
+                return await self.bot.say("{} You didn't put any numbers so I'm going to just roll 100 :game_die: {} :game_die:".format(author.mention, n))
+            elif len(allNums) is 1:
+                n = str(randint(1, allNums[0]))
+                return await self.bot.say("{} :game_die: {} :game_die:".format(author.mention, n))
+            else:
+                #get each component of the command to parse accordingly
+                components = []
+                while len(inputString) > 0:
+                    if inputString[0].isdigit():
+                        n = list(map(int, re.findall(r'\d+', inputString)))[0]
+                        components.append(n)
+                        inputString = inputString[len(str(n)):]
+                    elif inputString[0] in ['d','+','-','*','/','%']:
+                        components += inputString[0]
+                        inputString = inputString[1:]
+                    else:
+                        inputString = inputString[1:]
+
+                results = ""
+                total = 0
+                # edge case: if they chose to not say d but still want to do math, roll the first number
+                if 'd' not in components:
+                    if isinstance(components[0], int ):
+                        n = randint(1, components[0])
+                        results += str(n)
+                        total += n
+                for i in range(0, len(components)):
+                    if components[i] is 'd':
+                        numrolls = 1
+                        diesize = 100
+                        if i is not 0 and isinstance(components[i-1], int ):
+                            numrolls = components[i-1]
+                        if i + 1 < len(components) and isinstance(components[i+1], int ):
+                            diesize = components[i+1]
+                        else:
+                            return await self.bot.say("Cannot roll; number of sides not specified (<number of dice>d<number of sides>)")
+                        
+                        for j in range(0, numrolls):
+                            n = randint(1, diesize)
+                            total += n;
+                            results += str(n)
+                            if j is not numrolls - 1:
+                                results += " + "
+                            elif numrolls is not 1:
+                                results += " = " + str(total)
+
+                    elif components[i] is'+':
+                        if i + 1 < len(components) and isinstance(components[i+1], int ):
+                            results += " + {} = {}".format(str(components[i+1]), str(total + components[i+1]))
+                            total += components[i+1]
+                        else:
+                            return await self.bot.say("Cannot roll; no number to add after +")
+                    elif components[i] is'-':
+                        if i + 1 < len(components) and isinstance(components[i+1], int ):
+                            results += " - {} = {}".format(str(components[i+1]), str(total - components[i+1]))
+                            total -= components[i+1]
+                        else:
+                            return await self.bot.say("Cannot roll; no number to subtract with after -")
+                    elif components[i] is'*':
+                        if i + 1 < len(components) and isinstance(components[i+1], int ):
+                            results += " * {} = {}".format(str(components[i+1]), str(total * components[i+1]))
+                            total *= components[i+1]
+                        else:
+                            return await self.bot.say("Cannot roll; no number to multiply by after *")
+                    elif components[i] is'/':
+                        if i + 1 < len(components) and isinstance(components[i+1], int ):
+                            results += " / {} = {}".format(str(components[i+1]), str(total / components[i+1]))
+                            total /= components[i+1]
+                        else:
+                            return await self.bot.say("Cannot roll; no number to divide by after /")
+                    elif components[i] is'%':
+                        if i + 1 < len(components) and isinstance(components[i+1], int ):
+                            results += " % {} = {}".format(str(components[i+1]), str(total % components[i+1]))
+                            total %= components[i+1]
+                        else:
+                            return await self.bot.say("Cannot roll; no number to modulo with")
+
+                return await self.bot.say("{} :game_die: {} :game_die:".format(author.mention, results))
 
     @commands.command(pass_context=True)
     async def flip(self, ctx, user : discord.Member=None):
