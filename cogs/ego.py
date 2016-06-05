@@ -57,7 +57,7 @@ class Ego:
             for num in range(0, len(totals)):
                 if i < totals[num][0]:
                     i -= temp
-                    return await self.bot.say("{}, - {} {}".format(self.profiles[totals[num][1]]["quotes"][i], self.profiles[totals[num][1]]["name"]))
+                    return await self.bot.say("{}, - {}".format(self.profiles[totals[num][1]]["quotes"][i], self.profiles[totals[num][1]]["name"]))
                 temp += totals[num][0]
 
 
