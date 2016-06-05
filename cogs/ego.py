@@ -4,6 +4,7 @@ from .utils.dataIO import fileIO
 import json
 import time
 import random
+from random import randint
 
 class Ego:
     """A cog meant to keep track of stats given by fellow members of the discord"""
@@ -17,7 +18,7 @@ class Ego:
         """Allows you to save quotes said by a given user
 
         [p]writequote [user] \"Hello World!\" 
-       	Will store the quote \"Hello World!\" at the given date for user"""
+       	Will store the quote \"Hello World!\" """
 
         if not user:
             return await self.bot.say("No user given")
@@ -32,7 +33,6 @@ class Ego:
         await self.bot.say("Quote for " + user.name + " added.")
 
 
-
     @commands.command(pass_context=True)
     async def quote(self, ctx, user : discord.Member=None):
         """Prints quotes that have been saved from a given user
@@ -45,7 +45,22 @@ class Ego:
        	"""
 
         if not user:
-            await self.bot.say("No user given")
+            #randomly select a quote using weights to prevent favoring users
+            totals = []
+            currIndex = 0
+            for userID in self.profiles.keys():
+                currIndex += len(self.profiles[userID]["quotes"])
+                totals.append([currIndex, userID])
+            i = randint(0, currIndex - 1)
+            temp = 0
+
+            for num in range(0, len(totals)):
+                if i < totals[num][0]:
+                    i -= temp
+                    return await self.bot.say("{}, - {} {}".format(self.profiles[totals[num][1]]["quotes"][i], self.profiles[totals[num][1]]["name"]))
+                temp += totals[num][0]
+
+
         else:
             if not self.profile_check(user.id):
                 self.create_profile(user)
