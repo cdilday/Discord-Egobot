@@ -56,8 +56,8 @@ class Ego:
 
             for num in range(0, len(totals)):
                 if i < totals[num][0]:
-                    i -= temp
-                    return await self.bot.say("{}, - {}".format(self.profiles[totals[num][1]]["quotes"][i], self.profiles[totals[num][1]]["name"]))
+                    index = randint(0, len(self.profiles[totals[num][1]]["quotes"]) - 1)
+                    return await self.bot.say("{}, - {}".format(self.profiles[totals[num][1]]["quotes"][index], self.profiles[totals[num][1]]["name"]))
                 temp += totals[num][0]
 
 
