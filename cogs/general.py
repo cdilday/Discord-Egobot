@@ -86,6 +86,8 @@ class General:
                 # edge case: if they chose to not say d but still want to do math, roll the first number
                 if 'd' not in components:
                     if isinstance(components[0], int ):
+                        if components[0] < 1:
+                            return await self.bot.say("{} Can't roll less than 1, that's not how dice work".format(author.mention))
                         n = randint(1, components[0])
                         results += str(n)
                         total += n
