@@ -3,6 +3,7 @@ from discord.ext import commands
 from .utils.dataIO import fileIO
 import json
 import time
+import random
 
 class Ego:
     """A cog meant to keep track of stats given by fellow members of the discord"""
@@ -18,15 +19,17 @@ class Ego:
         [p]writequote [user] \"Hello World!\" 
        	Will store the quote \"Hello World!\" at the given date for user"""
 
-        #Your code will go here
         if not user:
-        	await self.bot.say("No user given")
-        else:
-        	if not self.profile_check(user.id):
-        		self.create_profile(user)
-        	self.profiles[user.id]["quotes"].append(ctx.message.content)
-        	fileIO("data/ego/profiles.json", "save", self.profiles)
-        	await self.bot.say("Quote for " + user.name + " added.")
+            return await self.bot.say("No user given")
+
+        #create profile if user doesn't exist in it	
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+        #parse the message, removing command and user id
+        length = 14 + len(str(user.id))
+        self.profiles[user.id]["quotes"].append(ctx.message.content[length:])
+        fileIO("data/ego/profiles.json", "save", self.profiles)
+        await self.bot.say("Quote for " + user.name + " added.")
 
 
 
@@ -41,8 +44,35 @@ class Ego:
 		Will pick the first quote containing 'word' in the list
        	"""
 
-        #Your code will go here
-        await self.bot.say("Not implemented")
+        if not user:
+            await self.bot.say("No user given")
+        else:
+            if not self.profile_check(user.id):
+                self.create_profile(user)
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("User doesn't have any quotes saved!")
+            if len(self.profiles[user.id]["quotes"]) is 0:
+                return await self.bot.say("User doesn't have any quotes saved!")
+
+            #parsing message for specific commands
+            length = 11 + len(str(user.id))
+            #no other parameters given, randomize quote
+            if len(ctx.message.content) <= length:
+                return await self.bot.say("{}, - {}".format(random.choice(self.profiles[user.id]["quotes"]), user.mention))
+
+            try:
+                # see if it's a number
+                index = int(ctx.message.content[length:])
+                if len (self.profiles[user.id]["quotes"]) < index:
+                    return await self.bot.say("No quote at {} since {} only has {}".format(str(index), user.mention, str(len(self.profiles[user.id]["quotes"]))))
+                return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][index-1], user.mention))
+            except ValueError:
+                #it's a string, search quotes for ones that contain it
+                for num in range(0, len(self.profiles[user.id]["quotes"])):
+                    if ctx.message.content[length:] in self.profiles[user.id]["quotes"][num]:
+                        return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][num], user.mention))
+                return await self.bot.say("No quote containing {} found for {}".format(ctx.message.content[length:], user.mention))
+
 
     @commands.command(pass_context=True)
     async def cheers(self, ctx, user : discord.Member=None):
