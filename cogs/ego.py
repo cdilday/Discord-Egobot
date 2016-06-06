@@ -3,6 +3,7 @@ from discord.ext import commands
 from .utils.dataIO import fileIO
 import json
 import time
+import copy
 import random
 from random import randint
 
@@ -18,12 +19,12 @@ class Ego:
         """Allows you to save quotes said by a given user
 
         [p]writequote [user] \"Hello World!\" 
-       	Will store the quote \"Hello World!\" """
+        Will store the quote \"Hello World!\" """
 
         if not user:
-            return await self.bot.say("No user given")
+            return await self.bot.say("No actual user given")
 
-        #create profile if user doesn't exist in it	
+        #create profile if user doesn't exist in it 
         if not self.profile_check(user.id):
             self.create_profile(user)
         #parse the message, removing command and user id
@@ -41,8 +42,8 @@ class Ego:
         [p]quote [user] #
         Will pick the quote at number # in the list
         [p]quote [user] word
-		Will pick the first quote containing 'word' in the list
-       	"""
+        Will pick the first quote containing 'word' in the list
+        """
 
         if not user:
             #randomly select a quote using weights to prevent favoring users
@@ -73,21 +74,20 @@ class Ego:
             length = 11 + len(str(user.id))
             #no other parameters given, randomize quote
             if len(ctx.message.content) <= length:
-                return await self.bot.say("{}, - {}".format(random.choice(self.profiles[user.id]["quotes"]), user.mention))
+                return await self.bot.say("{}, - {}".format(random.choice(self.profiles[user.id]["quotes"]), user.name))
 
             try:
                 # see if it's a number
                 index = int(ctx.message.content[length:])
                 if len (self.profiles[user.id]["quotes"]) < index:
-                    return await self.bot.say("No quote at {} since {} only has {}".format(str(index), user.mention, str(len(self.profiles[user.id]["quotes"]))))
-                return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][index-1], user.mention))
+                    return await self.bot.say("No quote at {} since {} only has {}".format(str(index), user.name, str(len(self.profiles[user.id]["quotes"]))))
+                return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][index-1], user.name))
             except ValueError:
                 #it's a string, search quotes for ones that contain it
                 for num in range(0, len(self.profiles[user.id]["quotes"])):
                     if ctx.message.content[length:] in self.profiles[user.id]["quotes"][num]:
                         return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][num], user.mention))
-                return await self.bot.say("No quote containing {} found for {}".format(ctx.message.content[length:], user.mention))
-
+                return await self.bot.say("No quote containing {} found for {}".format(ctx.message.content[length:], user.name))
 
     @commands.command(pass_context=True)
     async def cheers(self, ctx, user : discord.Member=None):
@@ -104,7 +104,7 @@ class Ego:
 
         Will give [user] the /"Ego/" stat if they didn't have it already, and then add 1 to it.
         This does not take you cheers points, but you may only do this once every few minutes
-       	"""
+        """
 
         #Your code will go here
         await self.bot.say("Not implemented")
@@ -116,25 +116,35 @@ class Ego:
         Will provide number of quotes, number of cheers point gained, cheers points remaining, and any misc. points given by other discord members"""
 
         #Your code will go here
-        await self.bot.say("Not implemented")
+
+        if user.id in self.profiles:
+            quotelist = self.profiles[user.id]["quotes"]
+            message = "User {}, whose quote alias is {}, has a total of {} quotes attributed to them:\n".format(user.name, self.profiles[user.id]["name"], len(quotelist))
+            for q in quotelist:
+                message += q + "\n"
+            return await self.bot.say("{}".format(message))
+
+        self.create_profile(user)
+        fileIO("data/ego/profiles.json", "save", self.profiles)
+        return 
 
 
     def profile_check(self, id):
-    	if id in self.profiles:
-    		return True
-    	else:
-    		return False
+        if id in self.profiles:
+            return True
+        else:
+            return False
 
     def quotes_check(self, id):
-    	if id in self.profiles and "quotes" in self.profiles[id]:
-    		return True
-    	else:
-    		return False
+        if id in self.profiles and "quotes" in self.profiles[id]:
+            return True
+        else:
+            return False
 
     def create_profile(self, user):
-    	if user.id in self.profiles:
-    		return
-    	self.profiles[user.id] = {"name" : user.name, "cheers_points" : 3, "props" : 0, "quotes" : []}
+        if user.id in self.profiles:
+            return
+        self.profiles[user.id] = {"name" : user.name, "cheers_points" : 3, "props" : 0, "quotes" : []}
 
 
 
