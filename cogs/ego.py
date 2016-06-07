@@ -8,7 +8,7 @@ import random
 from random import randint
 
 class Ego:
-    """A cog meant to keep track of stats given by fellow members of the discord"""
+    """A cog meant to keep track of stats and attributes given by fellow members of the discord"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -18,8 +18,8 @@ class Ego:
     async def addquote(self, ctx, user : discord.Member=None):
         """Allows you to save quotes said by a given user
 
-        [p]writequote [user] \"Hello World!\" 
-        Will store the quote \"Hello World!\" """
+        [p]addquote [user] \"Hello World!\" 
+        Will store the quote \"Hello World!\" for [user] """
 
         if not user:
             return await self.bot.say("No actual user given")
@@ -45,7 +45,7 @@ class Ego:
 
     @commands.command(pass_context=True)
     async def quote(self, ctx, user : discord.Member=None):
-        """Prints quotes that have been saved from a given user
+        """Prints quotes that have been saved from a given user, or just a random quote if no user given
 
         Will pick a randomly saved quote from the list
         [p]quote [user] #
@@ -114,6 +114,10 @@ class Ego:
         if lasttime[0] != today.day or lasttime[1] != today.month or lasttime[2] != today.year:
             self.profiles[ctx.message.author.id]["cheers_points"] = 3
 
+        #prevent people from cheering themselves
+        if user.id == ctx.message.author.id:
+            return await self.bot.say("You can pat yourself on the back, but you can't give props to yourself, {}.".format(ctx.message.author.name))
+
         #check if author has any points to give
         if self.profiles[ctx.message.author.id]["cheers_points"] <= 0:
             return await self.bot.say("You've given out too many cheers today, {}. Make them count tomorrow!".format(ctx.message.author.name))
@@ -129,8 +133,8 @@ class Ego:
     async def plus1(self, ctx,  statistic : "", user : discord.Member=None):
         """Add a point to a stat on a given user
 
-        Will give [user] the /"Ego/" stat if they didn't have it already, and then add 1 to it.
-        This does not take you cheers points, but you may only do this once every few minutes
+        Will give [user] the given stat if they didn't have it already, and then add 1 to it.
+        This does not take your cheers points, but you may only do this once every few minutes
         """
 
         #Your code will go here
