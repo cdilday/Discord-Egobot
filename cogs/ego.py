@@ -31,13 +31,23 @@ class Ego:
         length = 0
         if str(user.id) in ctx.message.content:
             length = 14 + len(str(user.id)) 
-        elif user.display_name in ctx.message.content:
-            if " " in user.display_name:
-                length = ctx.message.content.find("\" ") + 2
-            else:
-                length = 11 + len(user.display_name)
-        else: 
-            length = 11 + len(str(user.name))
+        else:
+            try:
+                if user.display_name in ctx.message.content:
+                    if " " in user.display_name:
+                        length = ctx.message.content.find("\" ") + 2
+                    else:
+                        length = 11 + len(user.display_name)
+                else:
+                    if " " in user.name and ctx.message.content.find("\" ") != -1:
+                        length = ctx.message.content.find("\" ") + 2 
+                    else:
+                        length = 11 + len(str(user.name))
+            except:
+                if " " in user.name and ctx.message.content.find("\" ") != -1:
+                    length = ctx.message.content.find("\" ") + 2
+                else:
+                    length = 11 + len(str(user.name))
         self.profiles[user.id]["quotes"].append(ctx.message.content[length:])
         fileIO("data/ego/profiles.json", "save", self.profiles)
         await self.bot.say("Quote for " + user.name + " added.")
