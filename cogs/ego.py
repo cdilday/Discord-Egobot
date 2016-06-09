@@ -103,6 +103,12 @@ class Ego:
         """Give cheers, props, kudos, or otherwise praise to a member
 
         Will give one of the command sender's daily alloted cheers points to [user] """
+        #check to make sure both users have profiles first
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+        if not self.profile_check(ctx.message.author.id):
+            self.create_profile(ctx.message.author)
+
         #housekeeping with points refreshing everyday
         today = datetime.date.today()
 
@@ -130,7 +136,7 @@ class Ego:
         return await self.bot.say("Cheers to you, {}! {}, you have {} points left to give for today".format(user.name,ctx.message.author.name, self.profiles[ctx.message.author.id]["cheers_points"]))
 
     @commands.command(pass_context=True)
-    async def plus1(self, ctx,  statistic : "", user : discord.Member=None):
+    async def plus1(self, ctx, user : discord.Member=None):
         """Add a point to a stat on a given user
 
         Will give [user] the given stat if they didn't have it already, and then add 1 to it.
@@ -138,7 +144,7 @@ class Ego:
         """
 
         #Your code will go here
-        await self.bot.say("Hey, this isn't implemented yet. So don't try it.")
+        await self.bot.say("Still not implemented")
 
     @commands.command(pass_context=True)
     async def stats(self, ctx, user : discord.Member=None):
@@ -171,6 +177,7 @@ class Ego:
             return False
 
     def create_profile(self, user):
+        today = datetime.date.today()
         if user.id in self.profiles:
             return
         self.profiles[user.id] = {"name" : user.name, "cheers_points" : 3, "props" : 0, "refresh_time" : [today.day, today.month, today.year], "quotes" : []}
