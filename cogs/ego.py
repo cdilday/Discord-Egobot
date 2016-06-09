@@ -8,10 +8,11 @@ import random
 from random import randint
 
 class Ego:
-    """A cog meant to keep track of stats and attributes given by fellow members of the discord"""
+    """A cog to keep track of stats and attributes given by fellow members of the discord"""
 
     def __init__(self, bot):
         self.bot = bot
+        #TODO: have it make its own directory and JSON files if not detected
         self.profiles = fileIO("data/ego/profiles.json", "load")
 
     @commands.command(pass_context=True)
@@ -63,7 +64,7 @@ class Ego:
         [p]quote [user] word
         Will pick the first quote containing 'word' in the list
         """
-
+        #with no parameters, this will select a completely random quote
         if not user:
             #randomly select a quote using weights to prevent favoring users
             totals = []
@@ -80,8 +81,9 @@ class Ego:
                     return await self.bot.say("{}, - {}".format(self.profiles[totals[num][1]]["quotes"][index], self.profiles[totals[num][1]]["name"]))
                 temp += totals[num][0]
 
-
+        # Now to handle parameters
         else:
+            #first check to make sure the user exists and has quotes
             if not self.profile_check(user.id):
                 self.create_profile(user)
                 fileIO("data/ego/profiles.json", "save", self.profiles)
@@ -89,9 +91,28 @@ class Ego:
             if len(self.profiles[user.id]["quotes"]) is 0:
                 return await self.bot.say("User doesn't have any quotes saved!")
 
-            #parsing message for specific commands
-            length = 11 + len(str(user.id))
-            #no other parameters given, randomize quote
+            #parsing message for specific commands, gotta find where the user ends and the parameters start in a way that's API compatible
+            length = 0
+            if str(user.id) in ctx.message.content:
+                length = 11 + len(str(user.id)) 
+            else:
+                try:
+                    if user.display_name in ctx.message.content:
+                        if " " in user.display_name:
+                            length = ctx.message.content.find("\" ") + 2
+                        else:
+                            length = 8 + len(user.display_name)
+                    else:
+                        if " " in user.name and ctx.message.content.find("\" ") != -1:
+                            length = ctx.message.content.find("\" ") + 2 
+                        else:
+                            length = 8 + len(str(user.name))
+                except:
+                    if " " in user.name and ctx.message.content.find("\" ") != -1:
+                        length = ctx.message.content.find("\" ") + 2
+                    else:
+                        length = 8 + len(str(user.name))
+            #no other parameters given, give quote from user
             if len(ctx.message.content) <= length:
                 return await self.bot.say("{}, - {}".format(random.choice(self.profiles[user.id]["quotes"]), user.name))
 
@@ -104,8 +125,8 @@ class Ego:
             except ValueError:
                 #it's a string, search quotes for ones that contain it
                 for num in range(0, len(self.profiles[user.id]["quotes"])):
-                    if ctx.message.content[length:] in self.profiles[user.id]["quotes"][num]:
-                        return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][num], user.mention))
+                    if ctx.message.content[length:].lower() in self.profiles[user.id]["quotes"][num].lower():
+                        return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][num], user.name))
                 return await self.bot.say("No quote containing {} found for {}".format(ctx.message.content[length:], user.name))
 
     @commands.command(pass_context=True)
@@ -153,7 +174,7 @@ class Ego:
         This does not take your cheers points, but you may only do this once every few minutes
         """
 
-        #Your code will go here
+        #TODO: implement this
         await self.bot.say("Still not implemented")
 
     @commands.command(pass_context=True)
