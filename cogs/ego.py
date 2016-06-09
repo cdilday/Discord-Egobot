@@ -30,7 +30,7 @@ class Ego:
         #parse the message, removing command and user id
         length = 0
         if str(user.id) in ctx.message.content:
-            length = 15 + len(str(user.id)) 
+            length = 14 + len(str(user.id)) 
         elif user.display_name in ctx.message.content:
             if " " in user.display_name:
                 length = ctx.message.content.find("\" ") + 2
