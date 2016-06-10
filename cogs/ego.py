@@ -38,28 +38,11 @@ class Ego:
         #create profile if user doesn't exist in it 
         if not self.profile_check(user.id):
             self.create_profile(user)
+
         #parse the message, removing command and user id
-        length = 0
-        if str(user.id) in ctx.message.content:
-            length = 14 + len(str(user.id)) 
-        else:
-            try:
-                if user.display_name in ctx.message.content:
-                    if " " in user.display_name:
-                        length = ctx.message.content.find("\" ") + 2
-                    else:
-                        length = 11 + len(user.display_name)
-                else:
-                    if " " in user.name and ctx.message.content.find("\" ") != -1:
-                        length = ctx.message.content.find("\" ") + 2 
-                    else:
-                        length = 11 + len(str(user.name))
-            except:
-                if " " in user.name and ctx.message.content.find("\" ") != -1:
-                    length = ctx.message.content.find("\" ") + 2
-                else:
-                    length = 11 + len(str(user.name))
-        self.profiles[user.id]["quotes"].append(ctx.message.content[length:])
+        messStart = self.find_message_start(ctx, user, "addquote")
+
+        self.profiles[user.id]["quotes"].append(ctx.message.content[messStart:])
         fileIO("data/ego/profiles.json", "save", self.profiles)
         await self.bot.say("`Quote for " + user.name + " added.`")
 
@@ -107,42 +90,24 @@ class Ego:
                 return await self.bot.say("`User doesn't have any quotes saved!`")
 
             #parsing message for specific commands, gotta find where the user ends and the parameters start in a way that's API compatible
-            length = 0
-            if str(user.id) in ctx.message.content:
-                length = 11 + len(str(user.id)) 
-            else:
-                try:
-                    if user.display_name in ctx.message.content:
-                        if " " in user.display_name:
-                            length = ctx.message.content.find("\" ") + 2
-                        else:
-                            length = 8 + len(user.display_name)
-                    else:
-                        if " " in user.name and ctx.message.content.find("\" ") != -1:
-                            length = ctx.message.content.find("\" ") + 2 
-                        else:
-                            length = 8 + len(str(user.name))
-                except:
-                    if " " in user.name and ctx.message.content.find("\" ") != -1:
-                        length = ctx.message.content.find("\" ") + 2
-                    else:
-                        length = 8 + len(str(user.name))
+            messStart = self.find_message_start(ctx, user, "quote")
+
             #no other parameters given, give quote from user
-            if len(ctx.message.content) <= length:
+            if len(ctx.message.content) <= messStart:
                 return await self.bot.say("{}, - {}".format(random.choice(self.profiles[user.id]["quotes"]), user.name))
 
             try:
                 # see if it's a number
-                index = int(ctx.message.content[length:])
+                index = int(ctx.message.content[messStart:])
                 if len (self.profiles[user.id]["quotes"]) < index:
                     return await self.bot.say("`No quote at {} since {} only has {}`".format(str(index), user.name, str(len(self.profiles[user.id]["quotes"]))))
                 return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][index-1], user.name))
             except ValueError:
                 #it's a string, search quotes for ones that contain it
                 for num in range(0, len(self.profiles[user.id]["quotes"])):
-                    if ctx.message.content[length:].lower() in self.profiles[user.id]["quotes"][num].lower():
+                    if ctx.message.content[messStart:].lower() in self.profiles[user.id]["quotes"][num].lower():
                         return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][num], user.name))
-                return await self.bot.say("`No quote containing {} found for {}`".format(ctx.message.content[length:], user.name))
+                return await self.bot.say("`No quote containing {} found for {}`".format(ctx.message.content[messStart:], user.name))
 
     @commands.command(pass_context=True)
     async def cheers(self, ctx, user : discord.Member=None):
@@ -198,38 +163,19 @@ class Ego:
             self.profiles[user.id]["stats"] = {}
 
         #need to parse the message again
-        length = 0
-        if str(user.id) in ctx.message.content:
-            length = 11 + len(str(user.id)) 
-        else:
-            try:
-                if user.display_name in ctx.message.content:
-                    if " " in user.display_name:
-                        length = ctx.message.content.find("\" ") + 2
-                    else:
-                        length = 8 + len(user.display_name)
-                else:
-                    if " " in user.name and ctx.message.content.find("\" ") != -1:
-                        length = ctx.message.content.find("\" ") + 2 
-                    else:
-                        length = 8 + len(str(user.name))
-            except:
-                if " " in user.name and ctx.message.content.find("\" ") != -1:
-                    length = ctx.message.content.find("\" ") + 2
-                else:
-                    length = 8 + len(str(user.name))
+        messStart = self.find_message_start(ctx, user, "plus1")
 
         #go through the keys to prevent duplicates and adjust stats accordingly
         for key in self.profiles[user.id]["stats"]:
-            if key.lower() == ctx.message.content[length:].lower():
+            if key.lower() == ctx.message.content[messStart:].lower():
                 self.profiles[user.id]["stats"][key] = self.profiles[user.id]["stats"][key] + 1
                 fileIO("data/ego/profiles.json", "save", self.profiles)
-                return await self.bot.say("{} gets +1 to {}".format(user.name, key))
+                return await self.bot.say("`{} gets +1 to {}`".format(user.name, key))
 
         #create the stat if not already created
-        self.profiles[user.id]["stats"][ctx.message.content[length:]] = 1
+        self.profiles[user.id]["stats"][ctx.message.content[messStart:]] = 1
         fileIO("data/ego/profiles.json", "save", self.profiles)
-        return await self.bot.say("`{} gets +1 to {}`".format(user.name, ctx.message.content[length:]))
+        return await self.bot.say("`{} gets +1 to {}`".format(user.name, ctx.message.content[messStart:]))
 
     @commands.command(pass_context=True)
     async def stats(self, ctx, user : discord.Member=None):
@@ -254,25 +200,80 @@ class Ego:
         fileIO("data/ego/profiles.json", "save", self.profiles)
         return await self.bot.say("`Looks like {} doesn't have any info yet! I've created an empty profile for them.`".format(user.name))
 
+    @commands.command(pass_context=True)
+    async def quotesonly(self, ctx, user : discord.Member=None):
+        if user.id in self.profiles:
+            quotelist = self.profiles[user.id]["quotes"]
+            message = "```{} has a total of {} quotes attributed to them:\n".format(user.name, len(quotelist))
+            for q in quotelist:
+                message += q + "\n"
+            message += "```"
+            return await self.bot.say("{}".format(message))
 
+        self.create_profile(user)
+        fileIO("data/ego/profiles.json", "save", self.profiles)
+        return await self.bot.say("`Looks like {} doesn't have any info yet! I've created an empty profile for them.`".format(user.name))
+
+    @commands.command(pass_context=True)
+    async def statsonly(self, ctx, user : discord.Member=None):
+        if user.id in self.profiles:
+            message = "```{} has been cheered {} times and has these stats:\n".format(user.name, self.profiles[user.id]["props"])
+            if "stats" in self.profiles[user.id]:
+                statlist = self.profiles[user.id]["stats"]
+                for s in statlist.keys():
+                    message += "{} in {}\n".format(statlist[s], s)
+            message += "```"
+            return await self.bot.say("{}".format(message))
+
+        self.create_profile(user)
+        fileIO("data/ego/profiles.json", "save", self.profiles)
+        return await self.bot.say("`Looks like {} doesn't have any info yet! I've created an empty profile for them.`".format(user.name))
+
+    # Checks to see if the profile exists
     def profile_check(self, id):
         if id in self.profiles:
             return True
         else:
             return False
 
+    # Checks to see if quotes exist in the given profiles
     def quotes_check(self, id):
         if id in self.profiles and "quotes" in self.profiles[id]:
             return True
         else:
             return False
 
+    # Creates and saves a profile for the given user
     def create_profile(self, user):
         today = datetime.date.today()
         if user.id in self.profiles:
             return
         self.profiles[user.id] = {"name" : user.name, "cheers_points" : 3, "props" : 0, "refresh_time" : [today.day, today.month, today.year], "quotes" : [], "stats" : {}}
 
+    # Gives the index of the start of the message in the given message after the username is called
+    def find_message_start(self, ctx, user, commName):
+        length = len(commName) + 3
+        if str(user.id) in ctx.message.content:
+            length += 3 + len(str(user.id)) 
+        else:
+            try:
+                if user.display_name in ctx.message.content:
+                    if " " in user.display_name:
+                        length = ctx.message.content.find("\" ") + 2
+                    else:
+                        length += len(user.display_name)
+                else:
+                    if " " in user.name and ctx.message.content.find("\" ") != -1:
+                        length = ctx.message.content.find("\" ") + 2 
+                    else:
+                        length += len(str(user.name))
+            except:
+                if " " in user.name and ctx.message.content.find("\" ") != -1:
+                    length = ctx.message.content.find("\" ") + 2
+                else:
+                    length += len(str(user.name))
+
+        return length
 
 
 def setup(bot):
