@@ -33,7 +33,7 @@ class Ego:
         Will store the quote \"Hello World!\" for [user] """
 
         if not user:
-            return await self.bot.say("No actual user given")
+            return await self.bot.say("`No actual user given`")
 
         #create profile if user doesn't exist in it 
         if not self.profile_check(user.id):
@@ -61,7 +61,7 @@ class Ego:
                     length = 11 + len(str(user.name))
         self.profiles[user.id]["quotes"].append(ctx.message.content[length:])
         fileIO("data/ego/profiles.json", "save", self.profiles)
-        await self.bot.say("Quote for " + user.name + " added.")
+        await self.bot.say("`Quote for " + user.name + " added.`")
 
 
     @commands.command(pass_context=True)
@@ -82,6 +82,11 @@ class Ego:
             for userID in self.profiles.keys():
                 currIndex += len(self.profiles[userID]["quotes"])
                 totals.append([currIndex, userID])
+
+            # if there are no quotes, there's nothing to do here
+            if currIndex is 0:
+                return await self.bot.say("`You have no quotes saved! Use [p]addquote [user] <quote> to add some!`")
+
             i = randint(0, currIndex - 1)
             temp = 0
 
@@ -97,9 +102,9 @@ class Ego:
             if not self.profile_check(user.id):
                 self.create_profile(user)
                 fileIO("data/ego/profiles.json", "save", self.profiles)
-                return await self.bot.say("User doesn't have any quotes saved!")
+                return await self.bot.say("`User doesn't have any quotes saved!`")
             if len(self.profiles[user.id]["quotes"]) is 0:
-                return await self.bot.say("User doesn't have any quotes saved!")
+                return await self.bot.say("`User doesn't have any quotes saved!`")
 
             #parsing message for specific commands, gotta find where the user ends and the parameters start in a way that's API compatible
             length = 0
@@ -130,14 +135,14 @@ class Ego:
                 # see if it's a number
                 index = int(ctx.message.content[length:])
                 if len (self.profiles[user.id]["quotes"]) < index:
-                    return await self.bot.say("No quote at {} since {} only has {}".format(str(index), user.name, str(len(self.profiles[user.id]["quotes"]))))
+                    return await self.bot.say("`No quote at {} since {} only has {}`".format(str(index), user.name, str(len(self.profiles[user.id]["quotes"]))))
                 return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][index-1], user.name))
             except ValueError:
                 #it's a string, search quotes for ones that contain it
                 for num in range(0, len(self.profiles[user.id]["quotes"])):
                     if ctx.message.content[length:].lower() in self.profiles[user.id]["quotes"][num].lower():
                         return await self.bot.say("{}, - {}".format(self.profiles[user.id]["quotes"][num], user.name))
-                return await self.bot.say("No quote containing {} found for {}".format(ctx.message.content[length:], user.name))
+                return await self.bot.say("`No quote containing {} found for {}`".format(ctx.message.content[length:], user.name))
 
     @commands.command(pass_context=True)
     async def cheers(self, ctx, user : discord.Member=None):
@@ -163,18 +168,18 @@ class Ego:
 
         #prevent people from cheering themselves
         if user.id == ctx.message.author.id:
-            return await self.bot.say("You can pat yourself on the back, but you can't give props to yourself, {}.".format(ctx.message.author.name))
+            return await self.bot.say("`You can pat yourself on the back, but you can't give props to yourself, {}.`".format(ctx.message.author.name))
 
         #check if author has any points to give
         if self.profiles[ctx.message.author.id]["cheers_points"] <= 0:
-            return await self.bot.say("You've given out too many cheers today, {}. Make them count tomorrow!".format(ctx.message.author.name))
+            return await self.bot.say("`You've given out too many cheers today, {}. Make them count tomorrow!`".format(ctx.message.author.name))
 
         #author uses his points, update appropriately
         self.profiles[ctx.message.author.id]["refresh_time"] = [today.day, today.month, today.year]
         self.profiles[ctx.message.author.id]["cheers_points"] -= 1
         self.profiles[user.id]["props"] += 1
         fileIO("data/ego/profiles.json", "save", self.profiles)
-        return await self.bot.say("Cheers to you, {}! {}, you have {} points left to give for today".format(user.name,ctx.message.author.name, self.profiles[ctx.message.author.id]["cheers_points"]))
+        return await self.bot.say("`Cheers to you, {}! {}, you have {} points left to give for today`".format(user.name,ctx.message.author.name, self.profiles[ctx.message.author.id]["cheers_points"]))
 
     @commands.command(pass_context=True)
     async def plus1(self, ctx, user : discord.Member=None):
@@ -184,8 +189,47 @@ class Ego:
         This does not take your cheers points, but you may only do this once every few minutes
         """
 
-        #TODO: implement this
-        await self.bot.say("Still not implemented")
+        #make sure the people involved have profiles
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+        if not self.profile_check(ctx.message.author.id):
+            self.create_profile(ctx.message.author)
+        if "stats" not in self.profiles[user.id]:
+            self.profiles[user.id]["stats"] = {}
+
+        #need to parse the message again
+        length = 0
+        if str(user.id) in ctx.message.content:
+            length = 11 + len(str(user.id)) 
+        else:
+            try:
+                if user.display_name in ctx.message.content:
+                    if " " in user.display_name:
+                        length = ctx.message.content.find("\" ") + 2
+                    else:
+                        length = 8 + len(user.display_name)
+                else:
+                    if " " in user.name and ctx.message.content.find("\" ") != -1:
+                        length = ctx.message.content.find("\" ") + 2 
+                    else:
+                        length = 8 + len(str(user.name))
+            except:
+                if " " in user.name and ctx.message.content.find("\" ") != -1:
+                    length = ctx.message.content.find("\" ") + 2
+                else:
+                    length = 8 + len(str(user.name))
+
+        #go through the keys to prevent duplicates and adjust stats accordingly
+        for key in self.profiles[user.id]["stats"]:
+            if key.lower() == ctx.message.content[length:].lower():
+                self.profiles[user.id]["stats"][key] = self.profiles[user.id]["stats"][key] + 1
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("{} gets +1 to {}".format(user.name, key))
+
+        #create the stat if not already created
+        self.profiles[user.id]["stats"][ctx.message.content[length:]] = 1
+        fileIO("data/ego/profiles.json", "save", self.profiles)
+        return await self.bot.say("`{} gets +1 to {}`".format(user.name, ctx.message.content[length:]))
 
     @commands.command(pass_context=True)
     async def stats(self, ctx, user : discord.Member=None):
@@ -195,14 +239,20 @@ class Ego:
 
         if user.id in self.profiles:
             quotelist = self.profiles[user.id]["quotes"]
-            message = "{} has been cheered {} times and has a total of {} quotes attributed to them:\n".format(user.name, self.profiles[user.id]["props"], len(quotelist))
+            message = "```{} has been cheered {} times and has a total of {} quotes attributed to them:\n".format(user.name, self.profiles[user.id]["props"], len(quotelist))
             for q in quotelist:
                 message += q + "\n"
+            if "stats" in self.profiles[user.id]:
+                message += "\nAs for stats, {} has:\n".format(user.name)
+                statlist = self.profiles[user.id]["stats"]
+                for s in statlist.keys():
+                    message += "{} in {}\n".format(statlist[s], s)
+            message += "```"
             return await self.bot.say("{}".format(message))
 
         self.create_profile(user)
         fileIO("data/ego/profiles.json", "save", self.profiles)
-        return await self.bot.say("Looks like {} doesn't have any info yet! I've created an empty profile for them.")
+        return await self.bot.say("`Looks like {} doesn't have any info yet! I've created an empty profile for them.`".format(user.name))
 
 
     def profile_check(self, id):
@@ -221,7 +271,7 @@ class Ego:
         today = datetime.date.today()
         if user.id in self.profiles:
             return
-        self.profiles[user.id] = {"name" : user.name, "cheers_points" : 3, "props" : 0, "refresh_time" : [today.day, today.month, today.year], "quotes" : []}
+        self.profiles[user.id] = {"name" : user.name, "cheers_points" : 3, "props" : 0, "refresh_time" : [today.day, today.month, today.year], "quotes" : [], "stats" : {}}
 
 
 
