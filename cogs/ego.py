@@ -6,13 +6,23 @@ import datetime
 import copy
 import random
 from random import randint
+import os
 
 class Ego:
     """A cog to keep track of stats and attributes given by fellow members of the discord"""
 
     def __init__(self, bot):
         self.bot = bot
-        #TODO: have it make its own directory and JSON files if not detected
+        #check to make sure the directory exists
+        if not os.path.exists("data/ego"):
+            os.makedirs("data/ego")
+            with open("data/ego/profiles.json", "w") as outfile:
+                json.dump({}, outfile, indent=4)
+                
+        #check to make sure the json wasn't deleted by itself
+        if not os.path.exists("data/ego/profiles.json"):
+            with open("data/ego/profiles.json", "w") as outfile:
+                json.dump({}, outfile, indent=4)
         self.profiles = fileIO("data/ego/profiles.json", "load")
 
     @commands.command(pass_context=True)
