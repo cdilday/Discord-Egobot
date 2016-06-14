@@ -42,7 +42,13 @@ class Ego:
         #parse the message, removing command and user id
         messStart = self.find_message_start(ctx, user, "addquote")
 
-        self.profiles[user.id]["quotes"].append(ctx.message.content[messStart:])
+        quoteStr = ctx.message.content[messStart:]
+
+        #add quotation mark if the user forgot to put them and it's actually a quote (not an action or description)
+        if "\"" not in quoteStr and quoteStr[0] != "*" and quoteStr[0] != "(":
+            quoteStr = "\"" + quoteStr + "\""
+
+        self.profiles[user.id]["quotes"].append(quoteStr)
         fileIO("data/ego/profiles.json", "save", self.profiles)
         await self.bot.say("`Quote for " + user.name + " added.`")
 
@@ -202,6 +208,7 @@ class Ego:
 
     @commands.command(pass_context=True)
     async def quotesonly(self, ctx, user : discord.Member=None):
+        """Provides all the quotes attributed to [user]"""
         if user.id in self.profiles:
             quotelist = self.profiles[user.id]["quotes"]
             message = "```{} has a total of {} quotes attributed to them:\n".format(user.name, len(quotelist))
@@ -216,6 +223,7 @@ class Ego:
 
     @commands.command(pass_context=True)
     async def statsonly(self, ctx, user : discord.Member=None):
+        """Provides the number of cheers and all given stats [user] has been given"""
         if user.id in self.profiles:
             message = "```{} has been cheered {} times and has these stats:\n".format(user.name, self.profiles[user.id]["props"])
             if "stats" in self.profiles[user.id]:
