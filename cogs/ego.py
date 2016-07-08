@@ -116,6 +116,75 @@ class Ego:
                 return await self.bot.say("`No quote containing {} found for {}`".format(ctx.message.content[messStart:], user.name))
 
     @commands.command(pass_context=True)
+    async def fixquote(self, ctx, user : discord.Member=None, word : str=""):
+        """Allows you to update a selected quote for the given user
+
+        [p]fixquote [user] <word> <string>
+        Will pick the quote in [user]'s quotes with <word> in it and replace it with <string>
+        Do not use quotes or spaces in the word key. It must be a single word or part of a word.
+        """
+        #first check to make sure the user exists and has quotes
+        if user is None:
+            return await self.bot.say("`I need a user to fix a quote for!`")
+
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+            fileIO("data/ego/profiles.json", "save", self.profiles)
+            return await self.bot.say("`User doesn't have any quotes saved!`")
+        if len(self.profiles[user.id]["quotes"]) is 0:
+            return await self.bot.say("`User doesn't have any quotes saved!`")
+
+        if word is "":
+            return await self.bot.say("`I can't find a quote without a key`")
+
+        #get message start, add word length
+        messStart = self.find_message_start(ctx, user, "fixquote")
+
+        messStart += len(word) + 1
+
+        if messStart >= len(ctx.message.content):
+            return await self.bot.say("`I can't fix a quote with nothing`")
+        # add quotemarks to given quote as needed
+        quoteStr = ctx.message.content[messStart:]
+
+        for num in range(0, len(self.profiles[user.id]["quotes"])):
+            if word.lower() in self.profiles[user.id]["quotes"][num].lower():
+                if "\"" not in quoteStr and quoteStr[0] != "*" and quoteStr[0] != "(":
+                    quoteStr = "\"" + quoteStr + "\""
+                self.profiles[user.id]["quotes"][num] = quoteStr
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("`Quote for " + user.name + " changed to`\n" + quoteStr)
+        return await self.bot.say("`No quote containing {} found for {}`".format(word, user.name))
+
+    @commands.command(pass_context=True)
+    async def removequote(self, ctx, user : discord.Member=None, word : str=""):
+        """Allows you to remove a selected quote for the given user
+
+        [p]fixquote [user] <word>
+        Will pick the quote in [user]'s quotes with <word> in it and remove it
+        """
+        #first check to make sure the user exists and has quotes
+        if user is None:
+            return await self.bot.say("`I need a user to remove a quote from!`")
+
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+            fileIO("data/ego/profiles.json", "save", self.profiles)
+            return await self.bot.say("`User doesn't have any quotes saved!`")
+        if len(self.profiles[user.id]["quotes"]) is 0:
+            return await self.bot.say("`User doesn't have any quotes saved!`")
+
+        if word is "":
+            return await self.bot.say("`I can't find a quote to remove without a key`")
+
+        for num in range(0, len(self.profiles[user.id]["quotes"])):
+            if word.lower() in self.profiles[user.id]["quotes"][num].lower():
+                del self.profiles[user.id]["quotes"][num]
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("`Quote for " + user.name + " removed`\n")
+        return await self.bot.say("`No quote containing {} found for {}`".format(word, user.name))
+
+    @commands.command(pass_context=True)
     async def cheers(self, ctx, user : discord.Member=None):
         """Give cheers, props, kudos, or otherwise praise to a member
 
