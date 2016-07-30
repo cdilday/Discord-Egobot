@@ -160,7 +160,7 @@ class Ego:
     async def removequote(self, ctx, user : discord.Member=None, word : str=""):
         """Allows you to remove a selected quote for the given user
 
-        [p]fixquote [user] <word>
+        [p]removequote [user] <word>
         Will pick the quote in [user]'s quotes with <word> in it and remove it
         """
         #first check to make sure the user exists and has quotes
@@ -251,6 +251,79 @@ class Ego:
         self.profiles[user.id]["stats"][ctx.message.content[messStart:]] = 1
         fileIO("data/ego/profiles.json", "save", self.profiles)
         return await self.bot.say("`{} gets +1 to {}`".format(user.name, ctx.message.content[messStart:]))
+
+    @commands.command(pass_context=True)
+    async def fix1(self, ctx, user : discord.Member=None, word : str=""):
+        """Allows you to update a selected quote for the given user
+
+        [p]fix1 [user] <word> <newstat>
+        Will pick the stat in [user]'s given stats with <word> in it and replace it with <newstat>
+        Do not use quotes or spaces in the word key. It must be a single word or part of a word.
+        """
+        #first check to make sure the user exists and has quotes
+
+        #make sure the people involved have profiles
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+            return await self.bot.say("`{} Didn't even have a profile! I have created one for them".format(user.name))
+        if not self.profile_check(ctx.message.author.id):
+            self.create_profile(ctx.message.author)
+        if "stats" not in self.profiles[user.id]:
+            self.profiles[user.id]["stats"] = {}
+            return await self.bot.say("`{} Doesn't even have stats!".format(user.name))
+
+        #get message start, add word length
+        messStart = self.find_message_start(ctx, user, "fix1")
+
+        messStart += len(word) + 1
+
+        if messStart >= len(ctx.message.content):
+            return await self.bot.say("`I can't fix a stat with nothing`")
+        # add quotemarks to given quote as needed
+        statStr = ctx.message.content[messStart:]
+
+        #get keylist and check to see if they even have this stat, keeping track of case sensitivity
+        keyList = list(self.profiles[user.id]["stats"].keys())
+        for num in range(0, len(self.profiles[user.id]["stats"])):
+            if word.lower() in keyList[num].lower():
+                numInStat = self.profiles[user.id]["stats"][keyList[num]]
+                del self.profiles[user.id]["stats"][keyList[num]]
+                self.profiles[user.id]["stats"][ctx.message.content[messStart:]] = numInStat
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("`Stat for " + user.name + " changed to`\n" + statStr)
+
+        return await self.bot.say("`No stat containing {} found for {}`".format(word, user.name))
+
+    @commands.command(pass_context=True)
+    async def remove1(self, ctx, user : discord.Member=None, word : str=""):
+        """Allows you to remove a selected stat for the given user
+
+        [p]remove1 [user] <word>
+        Will pick the stat in [user]'s stats with <word> in it and remove it
+        """
+        #first check to make sure the user exists and has stats
+        if user is None:
+            return await self.bot.say("`I need a user to remove a stat from!`")
+
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+            fileIO("data/ego/profiles.json", "save", self.profiles)
+            return await self.bot.say("`User doesn't have a profile! I have made one for them`")
+        if len(self.profiles[user.id]["stats"]) is 0:
+            return await self.bot.say("`User doesn't have any stats saved!`")
+
+        if word is "":
+            return await self.bot.say("`I can't find a quote to remove without a key`")
+
+        #get keylist and check to see if they even have this stat, keeping track of case sensitivity
+        keyList = list(self.profiles[user.id]["stats"].keys())
+        for num in range(0, len(self.profiles[user.id]["stats"])):
+            if word.lower() in keyList[num].lower():
+                del self.profiles[user.id]["stats"][keyList[num]]
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("`Stat for " + user.name + " removed`\n")
+
+        return await self.bot.say("`No stat containing {} found for {}`".format(word, user.name))
 
     @commands.command(pass_context=True)
     async def stats(self, ctx, user : discord.Member=None):
