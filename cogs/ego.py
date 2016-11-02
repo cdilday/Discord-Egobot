@@ -253,6 +253,37 @@ class Ego:
         return await self.bot.say("`{} gets +1 to {}`".format(user.name, ctx.message.content[messStart:]))
 
     @commands.command(pass_context=True)
+    async def minus1(self, ctx, user : discord.Member=None):
+        """Subtract a point to a stat on a given user
+
+        Will give [user] the given stat if they didn't have it already, and then subtract 1 from it.
+        This does not take your cheers points, but you may only do this once every few minutes
+        """
+
+        #make sure the people involved have profiles
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+        if not self.profile_check(ctx.message.author.id):
+            self.create_profile(ctx.message.author)
+        if "stats" not in self.profiles[user.id]:
+            self.profiles[user.id]["stats"] = {}
+
+        #need to parse the message again
+        messStart = self.find_message_start(ctx, user, "minus1")
+
+        #go through the keys to prevent duplicates and adjust stats accordingly
+        for key in self.profiles[user.id]["stats"]:
+            if key.lower() == ctx.message.content[messStart:].lower():
+                self.profiles[user.id]["stats"][key] = self.profiles[user.id]["stats"][key] - 1
+                fileIO("data/ego/profiles.json", "save", self.profiles)
+                return await self.bot.say("`{} subtracts 1 from {}`".format(user.name, key))
+
+        #create the stat if not already created
+        self.profiles[user.id]["stats"][ctx.message.content[messStart:]] = -1
+        fileIO("data/ego/profiles.json", "save", self.profiles)
+        return await self.bot.say("`{} subtracts 1 from {}`".format(user.name, ctx.message.content[messStart:]))
+
+    @commands.command(pass_context=True)
     async def fix1(self, ctx, user : discord.Member=None, word : str=""):
         """Allows you to update a selected quote for the given user
 
@@ -313,7 +344,7 @@ class Ego:
             return await self.bot.say("`User doesn't have any stats saved!`")
 
         if word is "":
-            return await self.bot.say("`I can't find a quote to remove without a key`")
+            return await self.bot.say("`I can't find a stat to remove without a key`")
 
         #get keylist and check to see if they even have this stat, keeping track of case sensitivity
         keyList = list(self.profiles[user.id]["stats"].keys())
@@ -322,6 +353,35 @@ class Ego:
                 del self.profiles[user.id]["stats"][keyList[num]]
                 fileIO("data/ego/profiles.json", "save", self.profiles)
                 return await self.bot.say("`Stat for " + user.name + " removed`\n")
+
+        return await self.bot.say("`No stat containing {} found for {}`".format(word, user.name))
+
+    @commands.command(pass_context=True)
+    async def get1(self, ctx, user : discord.Member=None, word : str=""):
+        """Allows you to remove a selected stat for the given user
+
+        [p]get1 [user] <word>
+        Will pick the stat in [user]'s stats with <word> in it and show how much they have in it
+        """
+        #first check to make sure the user exists and has stats
+        if user is None:
+            return await self.bot.say("`I need a user to lookup stat from!`")
+
+        if not self.profile_check(user.id):
+            self.create_profile(user)
+            fileIO("data/ego/profiles.json", "save", self.profiles)
+            return await self.bot.say("`User doesn't have a profile! I have made one for them`")
+        if len(self.profiles[user.id]["stats"]) is 0:
+            return await self.bot.say("`User doesn't have any stats saved!`")
+
+        if word is "":
+            return await self.bot.say("`I can't lookup a stat without a key`")
+
+        #get keylist and check to see if they even have this stat, keeping track of case sensitivity
+        keyList = list(self.profiles[user.id]["stats"].keys())
+        for num in range(0, len(self.profiles[user.id]["stats"])):
+            if word.lower() in keyList[num].lower():
+                return await self.bot.say("`" + user.name + " has " + str(self.profiles[user.id]["stats"][keyList[num]]) + " in " + [keyList[num]] + "`\n")
 
         return await self.bot.say("`No stat containing {} found for {}`".format(word, user.name))
 
