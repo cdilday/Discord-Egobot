@@ -358,14 +358,36 @@ class Ego:
 
     @commands.command(pass_context=True)
     async def get1(self, ctx, user : discord.Member=None, word : str=""):
-        """Allows you to remove a selected stat for the given user
+        """shows the given stat for the given user, a random stat for the given user, or a random stat for a random user
 
+        [p]get1
+        Will give a random stat from random user
+        [p]get1 [user]
+        Will give a random stat from the given [user]
         [p]get1 [user] <word>
         Will pick the stat in [user]'s stats with <word> in it and show how much they have in it
         """
-        #first check to make sure the user exists and has stats
-        if user is None:
-            return await self.bot.say("`I need a user to lookup stat from!`")
+        #with no parameters, this will select a completely random stat
+        if not user:
+            #randomly select a stat using weights to prevent favoring users
+            totals = []
+            currIndex = 0
+            for userID in self.profiles.keys():
+                currIndex += len(self.profiles[userID]["stats"])
+                totals.append([currIndex, userID])
+
+            # if there are no stat, there's nothing to do here
+            if currIndex is 0:
+                return await self.bot.say("`You have no stats saved! Use [p]plus1 [user] <stat> to add some!`")
+
+            i = randint(0, currIndex - 1)
+            temp = 0
+
+            for num in range(0, len(totals)):
+                if i < totals[num][0]:
+                    index = random.choice(list(self.profiles[totals[num][1]]["stats"].keys()))
+                    return await self.bot.say("`{} has {} in {}`".format( self.profiles[totals[num][1]]["name"], self.profiles[totals[num][1]]["stats"][index], index))
+                temp += totals[num][0]
 
         if not self.profile_check(user.id):
             self.create_profile(user)
@@ -374,8 +396,10 @@ class Ego:
         if len(self.profiles[user.id]["stats"]) is 0:
             return await self.bot.say("`User doesn't have any stats saved!`")
 
+        #no word given, return a random stat from given user
         if word is "":
-            return await self.bot.say("`I can't lookup a stat without a key`")
+            randomkey = random.choice(list(self.profiles[user.id]["stats"].keys()))
+            return await self.bot.say("`{} has {} in {}`".format(user.name, self.profiles[user.id]["stats"][randomkey], randomkey))
 
         #get keylist and check to see if they even have this stat, keeping track of case sensitivity
         keyList = list(self.profiles[user.id]["stats"].keys())
