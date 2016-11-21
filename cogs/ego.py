@@ -230,6 +230,10 @@ class Ego:
         """
 
         #make sure the people involved have profiles
+
+        if not user:
+            return await self.bot.say("`Need a user and a stat to add to`")
+
         if not self.profile_check(user.id):
             self.create_profile(user)
         if not self.profile_check(ctx.message.author.id):
@@ -259,6 +263,9 @@ class Ego:
         Will give [user] the given stat if they didn't have it already, and then subtract 1 from it.
         This does not take your cheers points, but you may only do this once every few minutes
         """
+
+        if not user:
+            return await self.bot.say("`Need a user and a stat to subtract from`")
 
         #make sure the people involved have profiles
         if not self.profile_check(user.id):
